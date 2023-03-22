@@ -3,7 +3,6 @@
 
 
 import pandas as pd
-import sys
 
 class Huc():
     '''
@@ -111,14 +110,54 @@ class Huc():
         except:
             print('error parse_huc')
 
-    def build_urls(self, write:bool=False):
+    def build_urls(self):
         '''
         # Build ESRI endpoint urls given huc data
-        
-        ### `write`; kwarg; bool
-            - Required, default False
-            - True writes the urls back to the file at `self.filename`
         '''
+        try:
+            URL_STRING = r'https://soilspackage-useast.s3.amazonaws.com/2021/'
+            # example: https://soilspackage-useast.s3.amazonaws.com/2021/MiddlePotomacAnacostiaOccoquan_02070010.ppkx
+            urls = []
+            for i in range(0, self.huc_data.shape[0]):
+                urlname = self.huc_data['Name'][i].replace(" ", "")
+                urlname = urlname.replace("-", "")
+                urlstring = URL_STRING + urlname + '_' + self.huc_data['HUC8'][i] + '.ppkx'
+                urls.append(urlstring)
+            self.huc_data['url'] = urls
+
+            if self.verbose == True:
+                print('URLs created:')
+                print('----------')
+                mysubset = self.huc_data[['HUC8', 'Name', 'url']]
+                if mysubset.shape[0] > 10: # if there are lots of rows, just show a few
+                    print(mysubset.head(10))
+                else:
+                    print(mysubset)
+        except:
+            pass
+    
+    def write_huc(self, out_file:str):
+        '''
+        # Write the dataset as xlsx
+
+        ### `out_file`; kwarg; str
+            - Required
+            - The (absolute or relative) filepath and filename with file extension
+        ### Examples
+        ```
+        myhuc.write_huc(out_file='data/test.xlsx')
+        ```
+        '''
+        try:
+            if not out_file.endswith('.xlsx'):
+                raise Exception
+            else:
+                with pd.ExcelWriter(out_file) as writer:
+                    self.huc_data.to_excel(writer, sheet_name='huc_data', index=False)
+        except:
+            print('error `save`')
+
+    def download(self):
         pass
 
 class Error(Exception):
