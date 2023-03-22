@@ -3,6 +3,9 @@
 
 
 import pandas as pd
+import wget
+import os
+import datetime
 
 class Huc():
     '''
@@ -15,9 +18,10 @@ class Huc():
         
         ### `filename`; kwarg; str
             - Required
+            - Only two filetypes are accepted: xlsx and csv
             - The filename of the file containing the xlsx of huc codes
-            - Must include file extension (.xlsx)
-            - Xlsx file must have two columns: 'HUC8' and 'Name'. E.g.,
+            - Must include file extension (.xlsx or .csv)
+            - File file must have two columns: 'HUC8' and 'Name'. E.g.,
                 |  HUC8  |  Name  |
                 |  ------  | ------  | 
                 |  02070008  |  Middle Potomac-Catoctin  |
@@ -86,10 +90,13 @@ class Huc():
         '''
         try:
             # load data
-            if self.sheet != '':
-                huc_data = pd.read_excel(self.filename, sheet_name=self.sheet)
-            else:
-                huc_data = pd.read_excel(self.filename)
+            if self.filename.endswith('xlsx'):
+                if self.sheet != '':
+                    huc_data = pd.read_excel(self.filename, sheet_name=self.sheet)
+                else:
+                    huc_data = pd.read_excel(self.filename)
+            if self.filename.endswith('csv'):
+                huc_data = pd.read_csv(self.filename)
 
             # clean data
             huc_data["Name"] = huc_data["Name"].str.strip() # strip trailing whitespace
@@ -157,8 +164,62 @@ class Huc():
         except:
             print('error `save`')
 
-    def download(self):
-        pass
+    def download(self, save_directory:str):
+        '''
+        # Save files at `url` endpoints to directory
+
+        ### `save_directory`; kwarg; str
+            - Required
+            - The directory into which you want to save the files downloaded from the endpoints in `huc_data['url']`
+            - Accepts relative or absolute filepaths
+        ### Examples
+        ```
+        myhuc.download(save_directory='mydir/mysubdir')
+        myhuc.download(save_directory='C:\\Users\\myuser\\Desktop')
+        ```
+        '''
+        try:
+            # look for `save_directory` that user provided
+            # if exists, move on, else make dir
+            dir_found = False
+            if os.path.isdir(save_directory):
+                dir_found = True
+            elif os.path.exists(os.path.join(os.getcwd(), save_directory)):
+                dir_found = True
+            else:
+                # print(f'`{save_directory}` not found')
+                # raise NotADirectoryError
+                os.makedirs(save_directory)
+                dir_found = True
+            
+            if dir_found == True:
+                start_dtm = datetime.datetime.now()
+                for url in self.huc_data['url']:
+                    print(url)
+                    # wget.download(url=url, out=save_directory, bar=download_progress_bar_custom)
+                # print('dir found!')
+                end_dtm = datetime.datetime.now()
+                print(f'Time elapsed: {end_dtm - start_dtm}')
+            else:
+                raise NotADirectoryError
+        except NotADirectoryError as e:
+            print(e)
+        except:
+            print('error `download()`')
+
+    def download_progress_bar_custom(current, total, width=80):
+        """
+        # Utility function to create a custom progress bar
+        
+        # `current`; kwarg; -- The full URL of a file on the internet as a string.
+            Example: r'https://www.fws.gov/wetlands/Data/State-Downloads/DC_shapefile_wetlands.zip'
+        Return:
+        size -- File size in bytes as integer
+        """
+        #print(int(int(current) / int(total) * 100) % 10)
+        if int(int(current) / int(total) * 100) % 10 == 0:
+            print("Downloading: {0}% [{1} / {2}] bytes".format(current / total * 100, current, total))
+
 
 class Error(Exception):
     """Parent class for exceptions"""
