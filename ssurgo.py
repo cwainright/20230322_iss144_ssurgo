@@ -139,6 +139,8 @@ class Huc():
                 mysubset = self.huc_data[['HUC8', 'Name', 'url']]
                 if mysubset.shape[0] > 10: # if there are lots of rows, just show a few
                     print(mysubset.head(10))
+                    print(f'\nThe first 10 of {self.huc_data.shape[0]} total records are shown here.\n')
+                    print('Call `{your_huc}.huc_data` to investigate all records.')
                 else:
                     print(mysubset)
         except:
@@ -183,34 +185,53 @@ class Huc():
             # capture job start time
             start_dtm = datetime.datetime.now()
 
-            # verify dir structure, create dir structure if needed
-            self._check_dirs(save_directory)
-            
             # check url validity before trying to download
             self._check_url_status()
 
-            # download files and add log entries
+            # verify dir structure, create dir structure if needed
+            self._check_dirs(save_directory)
+
+            # check our work before moving on
+            mydirs = []
             for i in range(0, self.huc_data.shape[0]):
+                check = os.path.isdir(self.huc_data["huc_dir"][i])
+                mydirs.append(check)
+            myurls = []
+            for i in range(0, self.huc_data.shape[0]):
+                if self.huc_data["status"][i] == '200':
+                    check = True
+                else:
+                    check = False
+                myurls.append(check)
+            
+            problem = True
+            if all(mydirs):
+                if all(myurls):
+                    problem = False
+
+            # download files and add log entries
+            if problem == False:
                 download_completed = []
-                if self.huc_data['status'][i] == '200':
-                    # download files
-                    # wget.download(url=url, out=save_directory, bar=download_progress_bar_custom)
+                for i in range(0, self.huc_data.shape[0]):
+                    wget.download(url=self.huc_data["url"][i], out=self.huc_data["huc_dir"][i])
+                    # full_filepath = os.path.join(self.huc_data["huc_dir"][i], 'test.xlsx')
+                    # self.write_huc(out_file=full_filepath)
                     download_dtm = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]) # https://www.iso.org/iso-8601-date-and-time-format.html
                     if self.verbose == True:
-                        print(f'{self.huc_data["HUC8"][i]} url exists... download completed: {download_dtm}')
-                else:
-                    if self.verbose == True:
-                        print(f'{self.huc_data["HUC8"][i]} url DOES NOT exist, no download')
-                    download_dtm = 'no download, status not 200'
-                download_completed.append(download_dtm)
+                        print(f'{self.huc_data["HUC8"][i]} download completed: {download_dtm}')
+                    download_completed.append(download_dtm)
+                self.huc_data['downloaded'] = download_completed # add log entries
+                
+                end_dtm = datetime.datetime.now() # capture job end time
 
-            self.huc_data['download_completed'] = download_completed # add log entries
-            
-            end_dtm = datetime.datetime.now() # capture job end time
-
-            if self.verbose == True:
-                print(f'Time elapsed: {end_dtm - start_dtm}')
-                print(self.huc_data)
+                if self.verbose == True:
+                    print('----------')
+                    print('Job completed.')
+                    print(f'Time elapsed: {end_dtm - start_dtm}')
+                    print('----------')
+                    print(self.huc_data)
+            else:
+                raise Exception
             
         except:
             print('error `download()`')
@@ -239,6 +260,7 @@ class Huc():
         ```
         '''
         try:
+            dirs_ok = False
             dir_found = False
             if os.path.isdir(save_directory):
                 dir_found = True
@@ -252,8 +274,10 @@ class Huc():
             # check child dir structure and make dirs if needed
             if dir_found == True:
                 parent_dir = os.path.join(os.getcwd(), save_directory)
+                huc_dirs = [] # capture huc_dirs
                 for i in range(0, self.huc_data.shape[0]):
                     huc_dir = os.path.join(parent_dir, self.huc_data["HUC8"][i])
+                    huc_dirs.append(huc_dir)
                     if not os.path.isdir(huc_dir):
                         os.makedirs(huc_dir)
                         if self.verbose == True:
@@ -261,6 +285,7 @@ class Huc():
                     else:
                         if self.verbose == True:
                             print(f'Using existing directory {huc_dir}')
+                self.huc_data["huc_dir"] = huc_dirs
             else:
                 raise NotADirectoryError
 

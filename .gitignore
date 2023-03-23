@@ -1,3 +1,9 @@
+# User-added
+data/test.xlsx
+todo.txt
+data/log.xlsx
+data/testlog.xlsx
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
