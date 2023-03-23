@@ -6,6 +6,7 @@ import pandas as pd
 import wget
 import os
 import datetime
+import urllib.request
 
 class Huc():
     '''
@@ -181,27 +182,40 @@ class Huc():
         try:
             # look for `save_directory` that user provided
             # if exists, move on, else make dir
+            start_dtm = datetime.datetime.now()
             dir_found = False
             if os.path.isdir(save_directory):
                 dir_found = True
             elif os.path.exists(os.path.join(os.getcwd(), save_directory)):
                 dir_found = True
             else:
-                # print(f'`{save_directory}` not found')
-                # raise NotADirectoryError
                 os.makedirs(save_directory)
                 dir_found = True
             
             if dir_found == True:
-                start_dtm = datetime.datetime.now()
-                for url in self.huc_data['url']:
-                    print(url)
-                    # wget.download(url=url, out=save_directory, bar=download_progress_bar_custom)
-                # print('dir found!')
-                end_dtm = datetime.datetime.now()
-                print(f'Time elapsed: {end_dtm - start_dtm}')
+                self._check_url_status() # check that program-generated urls are valid before trying to download
+                for i in range(0, self.huc_data.shape[0]):
+                    download_completed = []
+                    if self.huc_data['status'][i] == '200':
+                        # placeholder to loop over return codes and download
+                        # wget.download(url=url, out=save_directory, bar=download_progress_bar_custom)
+                        download_dtm = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]) # https://www.iso.org/iso-8601-date-and-time-format.html
+                        if self.verbose == True:
+                            print(f'{self.huc_data["HUC8"][i]} url exists... download completed: {download_dtm}')
+                    else:
+                        if self.verbose == True:
+                            print(f'{self.huc_data["HUC8"][i]} url DOES NOT exist, no download')
+                        download_dtm = 'no download, status not 200'
+                    download_completed.append(download_dtm)
+                self.huc_data['download_completed'] = download_completed
             else:
                 raise NotADirectoryError
+            
+            end_dtm = datetime.datetime.now()
+            if self.verbose == True:
+                print(f'Time elapsed: {end_dtm - start_dtm}')
+                print(self.huc_data)
+            
         except NotADirectoryError as e:
             print(e)
         except:
@@ -219,6 +233,33 @@ class Huc():
         #print(int(int(current) / int(total) * 100) % 10)
         if int(int(current) / int(total) * 100) % 10 == 0:
             print("Downloading: {0}% [{1} / {2}] bytes".format(current / total * 100, current, total))
+
+
+    def _check_url_status(self):
+        '''
+        # Check that each program-generated url is valid
+
+        A protected method that gets the http status code of each endpoint in `huc_data['url']`
+        https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
+
+        ### Examples
+        ```
+        self._check_url_status()
+        ```
+        '''
+        try:
+            return_codes = []
+            log_times = []
+            
+            for url in self.huc_data['url']:
+                return_code = str(urllib.request.urlopen(url).getcode())
+                return_codes.append(return_code)
+                log_time = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]) # https://www.iso.org/iso-8601-date-and-time-format.html
+                log_times.append(log_time)
+            self.huc_data['status_checked'] = log_times
+            self.huc_data['status'] = return_codes
+        except:
+            print('error `_check_url_status()`')
 
 
 class Error(Exception):
