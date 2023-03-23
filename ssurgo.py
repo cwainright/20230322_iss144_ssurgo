@@ -180,9 +180,10 @@ class Huc():
         ```
         '''
         try:
+            start_dtm = datetime.datetime.now() # capture job start time
             # look for `save_directory` that user provided
             # if exists, move on, else make dir
-            start_dtm = datetime.datetime.now()
+            
             dir_found = False
             if os.path.isdir(save_directory):
                 dir_found = True
@@ -193,11 +194,22 @@ class Huc():
                 dir_found = True
             
             if dir_found == True:
-                self._check_url_status() # check that program-generated urls are valid before trying to download
+
+                # if parent dir `save_directory` is found,
+                parent_dir = os.path.join(os.getcwd(), save_directory)
+                for huc in self.huc_data["HUC8"]:
+                    huc_dir = os.path.join(parent_dir, self.huc_data["HUC8"][huc])
+                    if not os.path.isdir(huc_dir):
+                        os.makedirs(huc_dir)
+
+                # check that program-generated urls are valid before trying to download
+                self._check_url_status()
+
+                # download files and add log entries
                 for i in range(0, self.huc_data.shape[0]):
                     download_completed = []
                     if self.huc_data['status'][i] == '200':
-                        # placeholder to loop over return codes and download
+                        # download files
                         # wget.download(url=url, out=save_directory, bar=download_progress_bar_custom)
                         download_dtm = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]) # https://www.iso.org/iso-8601-date-and-time-format.html
                         if self.verbose == True:
@@ -207,11 +219,12 @@ class Huc():
                             print(f'{self.huc_data["HUC8"][i]} url DOES NOT exist, no download')
                         download_dtm = 'no download, status not 200'
                     download_completed.append(download_dtm)
-                self.huc_data['download_completed'] = download_completed
+                self.huc_data['download_completed'] = download_completed # add log entries
             else:
                 raise NotADirectoryError
             
-            end_dtm = datetime.datetime.now()
+            end_dtm = datetime.datetime.now() # capture job end time
+
             if self.verbose == True:
                 print(f'Time elapsed: {end_dtm - start_dtm}')
                 print(self.huc_data)
@@ -234,6 +247,10 @@ class Huc():
         if int(int(current) / int(total) * 100) % 10 == 0:
             print("Downloading: {0}% [{1} / {2}] bytes".format(current / total * 100, current, total))
 
+    def _check_dirs(self):
+        pass
+        
+    
 
     def _check_url_status(self):
         '''
