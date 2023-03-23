@@ -2,6 +2,12 @@
 
 ### Addresses [ticket #144](https://github.com/NCRN/NCRN_DM/issues/144)
 
+### Repo contents
+- `main.py` is the scripted workflow that addresses  that executes calls methods from `ssurgo.py`
+- `ssurgo.py` holds classes and methods for `main.py`
+- `requirements.txt` holds python package requirements to execute `main.py`
+- `data/iss144_ssurgo.xlsx` is the source data file that `main.py` reads, parses, and builds a log file (via `write_huc()`) from
+
 ### Soils Data Source
 [Esri Soils Data Application Link with Metadata](https://www.arcgis.com/home/item.html?id=cdc49bd63ea54dd2977f3f2853e07fff)
 The data are downloadable as Esri packages based on 8-digit HUC.
