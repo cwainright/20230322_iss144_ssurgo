@@ -7,6 +7,34 @@ import wget
 import os
 import datetime
 import urllib.request
+import pickle
+import arcpy
+import json
+
+def read_huc(filename:str):
+        # saving `read_huc` outside a class instance so it's accessible via `ssurgo.read_huc` not as `ssurgo.Huc.read_huc` bound method
+        '''
+        # Read a saved `Huc` instance
+
+        Allows a user to read a saved `Huc` instance, thereby enabling a user to work asynchronously with `Huc` objects without re-creating them for each session.
+
+        ### `filename`; kwarg; str
+            - Required
+            - The filename, EXCLUDING A FILE EXTENSION, where you saved your `Huc` instance
+
+        ### Examples
+        ```
+        import ssurgo
+        myhuc = ssurgo.read_huc(filename='data/myhuc')
+        ```
+        '''
+        try:
+            filehandler = open(filename, 'rb')
+            object = pickle.load(filehandler)
+            filehandler.close()
+            return object
+        except:
+            print('error `read_huc`')
 
 class Huc():
     '''
@@ -218,7 +246,7 @@ class Huc():
                     # self.write_huc(out_file=full_filepath)
                     download_dtm = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]) # https://www.iso.org/iso-8601-date-and-time-format.html
                     if self.verbose == True:
-                        print(f'{self.huc_data["HUC8"][i]} download completed: {download_dtm}')
+                        print(f'\n{self.huc_data["HUC8"][i]} download completed: {download_dtm}')
                     download_completed.append(download_dtm)
                 self.huc_data['downloaded'] = download_completed # add log entries
                 
@@ -260,7 +288,6 @@ class Huc():
         ```
         '''
         try:
-            dirs_ok = False
             dir_found = False
             if os.path.isdir(save_directory):
                 dir_found = True
@@ -317,6 +344,113 @@ class Huc():
             self.huc_data['status'] = return_codes
         except:
             print('error `_check_url_status()`')
+
+    def save_huc(self, filename:str):
+        '''
+        # Save a huc instance
+
+        Allows a user to save a huc instance, thereby enabling a user to work asynchronously with huc objects without re-creating them for each session.
+
+        ### `filename`; kwarg; str
+            - Required
+            - The filename, EXCLUDING A FILE EXTENSION, where you want to save your `Huc` instance
+
+        ### Examples
+        ```
+        myhuc.save_huc(filename='data/myhuc')
+        ```
+        '''
+        # https://www.thoughtco.com/using-pickle-to-save-objects-2813661
+        try:
+            object = self
+            filehandler = open(filename, 'wb')
+            pickle.dump(object, filehandler)
+            filehandler.close()
+        except:
+            print('error `save_huc`')
+
+    def unpack(self):
+        '''
+        # Unpack geoprocessing packages
+
+        ### Examples
+        ```
+        myhuc.unpack()
+        ```
+        '''
+        try:
+            # check that dirs in self.huc_data["huc_dir"] exist
+            dirs_found = []
+            for dir in self.huc_data["huc_dir"]:
+                if os.path.isdir(dir):
+                    dir_found = True
+                else:
+                    dir_found = False
+                dirs_found.append(dir_found)
+            # print(f'dirs found: {dirs_found}')
+
+            # check that .ppkx files exist in  self.huc_data["huc_dir"]
+            # check that there's only one .ppkx file, error if there's >1
+            ppkx_found = {}
+            ppkx_ok = []
+            for dir in self.huc_data["huc_dir"]:
+                ppkx_found[dir] = {'ppkx_count': 0, 'ppkx': None, 'ok_to_unpack': False}
+                arcpy.env.workspace = dir # set destination directory
+                ppkx_in_dir = arcpy.ListFiles('*.ppkx')
+                ppkx_count = len(arcpy.ListFiles('*.ppkx'))
+                ppkx_found[dir]["ppkx_count"] = ppkx_count
+                ppkx_found[dir]["ppkx"] = ppkx_in_dir
+                if ppkx_found[dir]["ppkx_count"] != 1:
+                    status = False
+                    if self.verbose == True:
+                        print(f'Zero or multiple .ppkx files detected:')
+                        print(json.dumps(ppkx_found[dir]["ppkx"], indent=4))
+                else:
+                    status = True
+                ppkx_found[dir]["ok_to_unpack"] = status
+                ppkx_ok.append(status)
+            
+
+            # extract
+            if all(dirs_found): # check that dirs exist
+                if all (ppkx_ok): # check that there's only one ppkx to extract
+                    unpack_dirs = []
+                    unpack_timestamps = []
+                    for dir in self.huc_data["huc_dir"]: # replace `mytest` with variable for the log file
+                        arcpy.env.workspace = dir # set destination directory
+                        # source_ppkx = arcpy.ListFiles('*.ppkx')[0]
+                        destination_subdir = os.path.splitext(arcpy.ListFiles('*.ppkx')[0])[0] # choose a name for destination sub-directory
+                        arcpy.management.ExtractPackage(arcpy.ListFiles('*.ppkx')[0], os.path.splitext(arcpy.ListFiles('*.ppkx')[0])[0])
+                        # print(f'Unpacking {source_ppkx} into subdir {os.path.join(dir, destination_subdir)}')
+                        unpack_dtm = datetime.datetime.now()
+                        unpack_timestamps.append(unpack_dtm)
+                        unpack_dir = os.path.join(dir, destination_subdir)
+                        unpack_dirs.append(unpack_dir)
+                    self.huc_data["unpack_dir"] = unpack_dirs
+                    self.huc_data["unpack_timestamp"] = unpack_timestamps
+                else:
+                    raise Exception
+            else:
+                raise Exception
+            
+            if self.verbose == True:
+                print('-----------')
+                print('Unpack checks completed:')
+                print('-----------')
+                print(json.dumps(ppkx_found, indent=4))
+                print('-----------')
+                mysubset = self.huc_data[['HUC8', 'Name', 'unpack_dir', 'unpack_timestamp']]
+                print('Unpack results:')
+                print('-----------')
+                if mysubset.shape[0] > 10: # if there are lots of rows, just show a few
+                    print(mysubset.head(10))
+                    print(f'\nThe first 10 of {self.huc_data.shape[0]} total records are shown here.\n')
+                    print('Call `{your_huc}.huc_data` to investigate all records.')
+                else:
+                    print(mysubset)
+                print('-----------')
+        except:
+            print('error `unpack()`')
 
 class Error(Exception):
     """Parent class for exceptions"""
