@@ -3,6 +3,7 @@
 
 import ssurgo
 import os
+import arcpy
 from importlib import reload
 reload(ssurgo)
 # myhuc = ssurgo.Huc(filename='data/iss144_ssurgo.xlsx', VERBOSE=True)
@@ -17,39 +18,56 @@ reload(ssurgo)
 # del myhuc
 myhuc = ssurgo.open_huc(filename='data/myhuc')
 # myhuc.unpack()
-myhuc.save_huc(filename='data/myhuc')
+# myhuc.save_huc(filename='data/myhuc')
 # myhuc.write_huc(out_file='data/testlog.xlsx') # update log file
 filename = 'test.gdb'
 file_dir = os.path.join(os.getcwd(), 'data')
-mystuff = myhuc.merge(filename=filename, file_dir=file_dir)
+# myhuc.huc_data["gdb"] = os.path.join(file_dir, filename)
+myhuc.merge(filename=filename, file_dir=file_dir)
+# myhuc.write_huc(out_file='data/testlog.xlsx') # update log file
+# myhuc.save_huc(filename='data/myhuc')
 
 
 
-arcpy.management.Merge(mystuff, os.path.join(file_dir, filename, 'Mapunits'))
-
-os.path.isdir(os.path.join(file_dir, filename, 'Mapunits'))
-
-os.path.join(file_dir, filename)
-arcpy.management.CreateFileGDB(file_dir, filename)
-import arcpy
-# Set local variables
 
 
-# Run CreateFileGDB
-out_path = os.path.join(os.getcwd(), 'data')
-os.path.isdir(os.path.join(os.getcwd(), 'data'))
-arcpy.management.CreateFileGDB(out_path, 'test.gdb')
-arcpy.management.CreateFileGDB('data/test.gdb')
 
 
-import arcpy
 
-# Set local variables
-out_folder_path = os.path.join(os.getcwd(), "data")
-out_name = "fGDB.gdb"
 
-# Run CreateFileGDB
-arcpy.management.CreateFileGDB(out_folder_path, out_name)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

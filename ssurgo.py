@@ -11,31 +11,6 @@ import pickle
 import arcpy
 import json
 
-def open_huc(filename:str):
-        # saving `open_huc` outside a class instance so it's accessible via `ssurgo.open_huc` not as `ssurgo.Huc.open_huc` bound method
-        '''
-        # Read a saved `Huc` instance
-
-        Allows a user to read a saved `Huc` instance, thereby enabling a user to work asynchronously with `Huc` objects without re-creating them for each session.
-
-        ### `filename`; kwarg; str
-            - Required
-            - The filename, EXCLUDING A FILE EXTENSION, where you saved your `Huc` instance
-
-        ### Examples
-        ```
-        import ssurgo
-        myhuc = ssurgo.open_huc(filename='data/myhuc')
-        ```
-        '''
-        try:
-            filehandler = open(filename, 'rb')
-            object = pickle.load(filehandler)
-            filehandler.close()
-            return object
-        except:
-            print('error `open_huc`')
-
 class Huc():
     '''
     # A class that holds HUC lookup codes
@@ -465,13 +440,16 @@ class Huc():
             - The filepath to the directory where you want to save `filename` gdb
         ### Examples
         ```
-        import os
+        # relative path
+        import os # only needed for relative path
         filename = 'test.gdb'
         file_dir = os.path.join(os.getcwd(), 'data')
-        out_path = os.path.join(file_dir, filename)
-        myhuc.merge(filename=out_path) # local variable path
-        myhuc.merge(filename=r'C:\\Users\\cwainright\\OneDrive - DOI\\Documents\\data_projects\\2023\\20230322_iss144_ssurgo\\data\\test.gdb') # absolute path
-        myhuc.merge(filename='data/test.gdb') # relative path
+        myhuc.merge(filename=filename, file_dir=file_dir)
+
+        # absolute path
+        filename = 'test.gdb'
+        file_dir = r'C:\\Users\\cwainright\\OneDrive - DOI\\Documents\\data_projects\\2023\\20230322_iss144_ssurgo\\data'
+        myhuc.merge(filename=filename, file_dir=file_dir)
         ```
         '''
         try:
@@ -483,8 +461,7 @@ class Huc():
                     file_dir
             # make empty gdb
             arcpy.management.CreateFileGDB(file_dir, filename)
-            for i in range(self.huc_data.shape[0]):
-                self.huc_data["gdb"][i] = os.path.join(file_dir, filename) # save the gdb filepath to log file
+            self.huc_data["gdb"] = os.path.join(file_dir, filename) # save the gdb filepath to log file
 
             # find feature classes
             targets = []
@@ -513,7 +490,8 @@ class Huc():
             arcpy.management.Merge(feature_classes, os.path.join(file_dir, filename, 'Mapunits'))
 
             if self.verbose == True:
-                print('Found these feature classes to merge:')
+                print('----------')
+                print(f'Found {len(feature_classes)} feature classes to merge:')
                 print('----------')
                 print(feature_classes)
                 print('----------')
@@ -526,15 +504,39 @@ class Huc():
                 for ds in datasets:
                     for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
                         path = os.path.join(arcpy.env.workspace, ds, fc)
-                        print('Found these feature classes to merge:')
+                        print('Merged feature classes to:')
                         print('----------')
                         print(path)
                         print('----------')
                         
-            
-            # return feature_classes
         except:
             print('problem `merge()`')
+
+def open_huc(filename:str):
+        # saving `open_huc` outside a class instance so it's accessible via `ssurgo.open_huc` not as `ssurgo.Huc.open_huc` bound method
+        '''
+        # Read a saved `Huc` instance
+
+        Allows a user to read a saved `Huc` instance, thereby enabling a user to work asynchronously with `Huc` objects without re-creating them for each session.
+
+        ### `filename`; kwarg; str
+            - Required
+            - The filename, EXCLUDING A FILE EXTENSION, where you saved your `Huc` instance
+
+        ### Examples
+        ```
+        import ssurgo
+        myhuc = ssurgo.open_huc(filename='data/myhuc')
+        ```
+        '''
+        try:
+            filehandler = open(filename, 'rb')
+            object = pickle.load(filehandler)
+            filehandler.close()
+            return object
+        except:
+            print('error `open_huc`')
+
 class Error(Exception):
     """Parent class for exceptions"""
     pass
