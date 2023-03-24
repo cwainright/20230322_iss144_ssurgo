@@ -5,6 +5,7 @@ data/log.xlsx
 data/testlog.xlsx
 02070010
 02070008
+data/test.gdb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
