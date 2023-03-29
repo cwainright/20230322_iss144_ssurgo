@@ -10,6 +10,7 @@ import urllib.request
 import pickle
 import arcpy
 import json
+import re
 
 class Huc():
     '''
@@ -452,6 +453,7 @@ class Huc():
         myhuc.merge(filename=filename, file_dir=file_dir)
         ```
         '''
+        # print('got here')
         try:
             # check that out dir exists, create if not
             if not os.path.isdir(file_dir):
@@ -512,6 +514,89 @@ class Huc():
         except:
             print('problem `merge()`')
 
+    def join(self, *join_features:str, target_feature:str, out_feature:str):
+        '''
+        # Spatial join the gdb produced by `merge()` with NCRN monitoring locations data
+        
+        ### `join_features`; arbitrary arg; str
+            - Required
+            - Accepts one or more comma-separated feature layers to join to `target_feature`
+            - e.g., 'data/mygdb.gdb/water_locations', 'data/mygdb.gdb/veg_locations'
+        ### `target_feature`; kwarg; str
+            - Required
+            - The filepath to the feature layer to which `join_feature` will be joined
+            - e.g., 'data/test.gdb/Mapunits'
+        ### `out_feature`; kwarg; str
+            - Required
+            - The filepath to the feature layer that will result from the join
+            - e.g., 'data/test.gdb/join_output'
+        ### Examples
+        ```
+        myhuc.join(
+            os.path.join(os.getcwd(), "data/NCRN_Monitoring_Locations.gdb/IMD/ECO_MonitoringLocations_pt"),
+            os.path.join(os.getcwd(), "data/NCRN_Monitoring_Locations.gdb/IMD/ECO_MonitoringLocations_pt"),
+            target_feature=os.path.join(os.getcwd(), r'data\test.gdb\Mapunits'),
+            out_feature='data/test.gdb/join_output'
+        )
+        ```
+        '''
+        try:
+            # confirm that the provided features exist
+            target_feature_ok = False
+
+            arcpy.env.workspace = os.path.split(target_feature)[0]
+            datasets = arcpy.ListDatasets()
+            datasets = [''] + datasets if datasets is not None else []
+
+            paths = []
+            for ds in datasets:
+                for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
+                    path = os.path.join(arcpy.env.workspace, ds, fc)
+                    paths.append(path)
+            if os.path.normpath(target_feature) in paths:
+                target_feature_ok = True
+
+            join_features_ok = []
+            for feature in join_features:
+                # print(feature)
+                arcpy.env.workspace = os.path.join(os.getcwd(), *os.path.split(re.search('(?:(?!\\\IMD).)*', feature)[0]))
+                datasets = arcpy.ListDatasets()
+                datasets = [''] + datasets if datasets is not None else []
+
+                paths = []
+                for ds in datasets:
+                    for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
+                        path = os.path.normpath(os.path.join(arcpy.env.workspace, ds, fc))
+                        paths.append(path)
+                        # print(path)
+                if os.path.normpath(feature) in paths:
+                    join_features_ok.append(True)
+                    # print('got here2')
+                else:
+                    join_features_ok.append(False)
+            
+            # print(paths)
+
+            if all(join_features_ok) and target_feature_ok == True:
+                # write a loop over join features and join them with the appropriate target feature
+                # while counter <1, join the first `join_feature` to `target_feature`
+                # while counter 1 < `counter` <= (len(join_features)-1) join the nth `join_feature` to `out_feature` (i.e., append)
+                counter = 0
+                while counter == 0: 
+                    # print(f'counter: {counter}; (target_feature, out_feature), {join_features[counter]}')
+                    arcpy.analysis.SpatialJoin(target_feature, join_features[counter], out_feature)
+                    counter += 1
+                while 0 < counter <= (len(join_features)-1):
+                    # print(f'counter: {counter}; (out_feature, out_feature), {join_features[counter]}')
+                    arcpy.analysis.SpatialJoin(out_feature, join_features[counter], out_feature)
+                    counter += 1
+
+            if self.verbose == True:
+                print(f'target_feature_ok: {target_feature_ok}')
+                print(f'join_features_ok: {join_features_ok}')
+        except:
+            pass
+    
 def open_huc(filename:str):
         # saving `open_huc` outside a class instance so it's accessible via `ssurgo.open_huc` not as `ssurgo.Huc.open_huc` bound method
         '''
