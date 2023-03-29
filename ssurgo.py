@@ -451,6 +451,17 @@ class Huc():
         filename = 'test.gdb'
         file_dir = r'C:\\Users\\cwainright\\OneDrive - DOI\\Documents\\data_projects\\2023\\20230322_iss144_ssurgo\\data'
         myhuc.merge(filename=filename, file_dir=file_dir)
+
+        # prove that `merge()` worked
+        arcpy.env.workspace = r'data\test.gdb'
+        datasets = arcpy.ListDatasets()
+        datasets = [''] + datasets if datasets is not None else []
+        mydata = []
+        for ds in datasets:
+            for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
+                path = os.path.join(arcpy.env.workspace, ds, fc)
+                print(path)
+                mydata.append(path)
         ```
         '''
         # print('got here')
@@ -487,17 +498,27 @@ class Huc():
                         if path.endswith('Mapunits'): # exclude "Subbasin" and other non-"Mapunits" feature classes
                             feature_classes.append(path)
             self.merged_featureclasses = feature_classes # save
-            
-            # merge feature classes into gdb
-            arcpy.management.Merge(feature_classes, os.path.join(file_dir, filename, 'Mapunits'))
 
             if self.verbose == True:
                 print('----------')
                 print(f'Found {len(feature_classes)} feature classes to merge:')
                 print('----------')
-                print(feature_classes)
+                counter = 1
+                for f in feature_classes:
+                    print(f'{counter}. {f}')
+                    counter += 1
                 print('----------')
+                print('Merging...')
+                print('----------')
+            
+            # merge feature classes into gdb
+            arcpy.management.Merge(feature_classes, os.path.join(file_dir, filename, 'Mapunits'))
 
+            # add output to log file
+            self.huc_data['merge_datetime'] = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+            self.huc_data['merge_feature'] = path
+
+            if self.verbose == True:
                 # get proof that arcpy thinks the merge worked properly
                 arcpy.env.workspace = os.path.join(file_dir, filename)
                 datasets = arcpy.ListDatasets()
@@ -532,12 +553,29 @@ class Huc():
             - e.g., 'data/test.gdb/join_output'
         ### Examples
         ```
+        # `join()`
         myhuc.join(
-            os.path.join(os.getcwd(), "data/NCRN_Monitoring_Locations.gdb/IMD/ECO_MonitoringLocations_pt"),
-            os.path.join(os.getcwd(), "data/NCRN_Monitoring_Locations.gdb/IMD/ECO_MonitoringLocations_pt"),
+            os.path.join(os.getcwd(), r"data\\NCRN_Monitoring_Locations.gdb\\IMD\\ECO_MonitoringLocations_pt"),
+            os.path.join(os.getcwd(), r"data\\NCRN_Monitoring_Locations.gdb\\IMD\ECO_MonitoringLocations_pt"),
             target_feature=os.path.join(os.getcwd(), r'data\test.gdb\Mapunits'),
             out_feature='data/test.gdb/join_output'
         )
+
+        # prove that `join()` worked
+        out_feature = r'data/test.gdb/join_output'
+        field_names = [f.name for f in arcpy.ListFields(out_feature)]
+
+        # arcpy.env.workspace = r'data\\test.gdb'
+        # datasets = arcpy.ListDatasets()
+        # datasets = [''] + datasets if datasets is not None else []
+        # mydata = []
+        # for ds in datasets:
+        #     for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
+        #         path = os.path.join(arcpy.env.workspace, ds, fc)
+        #         print(path)
+        #         mydata.append(path)
+        # featureclass = mydata[1]
+        # field_names = [f.name for f in arcpy.ListFields(featureclass)] # will only return colnames if join worked
         ```
         '''
         try:
@@ -558,7 +596,6 @@ class Huc():
 
             join_features_ok = []
             for feature in join_features:
-                # print(feature)
                 arcpy.env.workspace = os.path.join(os.getcwd(), *os.path.split(re.search('(?:(?!\\\IMD).)*', feature)[0]))
                 datasets = arcpy.ListDatasets()
                 datasets = [''] + datasets if datasets is not None else []
@@ -568,35 +605,107 @@ class Huc():
                     for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
                         path = os.path.normpath(os.path.join(arcpy.env.workspace, ds, fc))
                         paths.append(path)
-                        # print(path)
                 if os.path.normpath(feature) in paths:
                     join_features_ok.append(True)
-                    # print('got here2')
                 else:
                     join_features_ok.append(False)
             
-            # print(paths)
-
             if all(join_features_ok) and target_feature_ok == True:
-                # write a loop over join features and join them with the appropriate target feature
+                # loop over join features and join them with the appropriate target feature
                 # while counter <1, join the first `join_feature` to `target_feature`
                 # while counter 1 < `counter` <= (len(join_features)-1) join the nth `join_feature` to `out_feature` (i.e., append)
+                # counter = 0
+                # while counter == 0: 
+                #     print(f'counter: {counter}; (type: join_feature to target_feature); {join_features[counter]}')
+                #     arcpy.analysis.SpatialJoin(target_feature, join_features[counter], out_feature)
+                #     counter += 1
+                # while 0 < counter <= (len(join_features)-1):
+                #     print(f'counter: {counter}; (type: join_feature to out_feature); {join_features[counter]}')
+                #     arcpy.analysis.SpatialJoin(out_feature, join_features[counter], out_feature)
+                #     counter += 1
+
+                # join first feature
                 counter = 0
-                while counter == 0: 
-                    # print(f'counter: {counter}; (target_feature, out_feature), {join_features[counter]}')
-                    arcpy.analysis.SpatialJoin(target_feature, join_features[counter], out_feature)
-                    counter += 1
-                while 0 < counter <= (len(join_features)-1):
-                    # print(f'counter: {counter}; (out_feature, out_feature), {join_features[counter]}')
-                    arcpy.analysis.SpatialJoin(out_feature, join_features[counter], out_feature)
-                    counter += 1
+                arcpy.analysis.SpatialJoin(target_feature, join_features[0], out_feature)
+                if self.verbose == True:
+                    print(f'counter: {int(counter) + 1}; (type: join_feature to target_feature); {join_features[0]}')
+                
+                # join nth feature
+                counter += 1
+                if len(join_features) > 1:
+                    for i in range(1, len(join_features)): # start loop at [1] to avoid double-joining layer at index [0]
+                        arcpy.analysis.SpatialJoin(out_feature, join_features[i], out_feature)
+                        if self.verbose == True:
+                            print(f'counter: {int(counter) + 1}; (type: join_feature to out_feature); {join_features[i]}')
+                        counter += 1
+
+                # save field names
+                print('here')
+                self.field_names = [f.name for f in arcpy.ListFields(out_feature)] # will only return colnames if join worked
+                # field_names = [f.name for f in arcpy.ListFields(out_feature)]
+                # self.field_names = field_names
+                print('got here')
+                # add output to log file
+                self.huc_data['join_datetime'] = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+                print('got here2')
+                self.huc_data['join_fields'] = ';'.join(join_features)
+                print('got here3')
+                self.huc_data['out_layer'] = out_feature
+                print('got here2')
+
+            if not self.field_names:
+                raise Exception
+            elif len(self.field_names) == 0:
+                raise Exception
 
             if self.verbose == True:
                 print(f'target_feature_ok: {target_feature_ok}')
                 print(f'join_features_ok: {join_features_ok}')
         except:
-            pass
+            print('error `join()`')
     
+    def select(self, start_field:str='INDICATORCAT', save_file:str='', save:bool=False):
+        '''
+        # Select the columns needed for the final table
+
+        ### `start_field`; kwarg; str
+            - Required
+            - Default 'IMLOCID'
+            - Program will select columns up to but not including the column name provided
+        ### `save_file`; kwarg; str
+            - Required if `save` is True
+            - The filename including file extension (.csv) for the output table
+        ### `save`; kwarg; bool
+            - Required
+            - Default False
+            - True tells the program to save the table generated by `select()` to the location specified in `save_file`
+        ### Examples
+        ```
+
+        ```
+        '''
+        try:
+            field_exist = False
+            if start_field in self.field_list:
+                field_exist = True
+            
+            if field_exist == True:
+                final_index = self.field_names.index(start_field)
+                self.final_fieldnames = self.field_names[:final_index]
+
+            if self.verbose == True:
+                print('Original fields:')
+                print('----------')
+                print(self.field_names)
+                print('Final fields:')
+                print('----------')
+                print(self.final_fieldnames)
+
+            else:
+                print('You entered a `start_field` that does not exist.')
+        except:
+            print('problem `select()`')
+
 def open_huc(filename:str):
         # saving `open_huc` outside a class instance so it's accessible via `ssurgo.open_huc` not as `ssurgo.Huc.open_huc` bound method
         '''
