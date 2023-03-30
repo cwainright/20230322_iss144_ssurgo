@@ -535,7 +535,7 @@ class Huc():
         except:
             print('problem `merge()`')
 
-    def join(self, *join_features:str, target_feature:str, out_feature:str):
+    def join(self, *join_features:str, target_feature:str, dest_feature:str):
         '''
         # Spatial join the gdb produced by `merge()` with NCRN monitoring locations data
         
@@ -558,12 +558,12 @@ class Huc():
             os.path.join(os.getcwd(), r"data\\NCRN_Monitoring_Locations.gdb\\IMD\\ECO_MonitoringLocations_pt"),
             os.path.join(os.getcwd(), r"data\\NCRN_Monitoring_Locations.gdb\\IMD\ECO_MonitoringLocations_pt"),
             target_feature=os.path.join(os.getcwd(), r'data\test.gdb\Mapunits'),
-            out_feature='data/test.gdb/join_output'
+            dest_feature='data/test.gdb/join_output'
         )
 
         # prove that `join()` worked
-        out_feature = r'data/test.gdb/join_output'
-        field_names = [f.name for f in arcpy.ListFields(out_feature)]
+        dest_feature = r'data/test.gdb/join_output'
+        field_names = [f.name for f in arcpy.ListFields(dest_feature)]
 
         # arcpy.env.workspace = r'data\\test.gdb'
         # datasets = arcpy.ListDatasets()
@@ -611,47 +611,60 @@ class Huc():
                     join_features_ok.append(False)
             
             if all(join_features_ok) and target_feature_ok == True:
-                # loop over join features and join them with the appropriate target feature
-                # while counter <1, join the first `join_feature` to `target_feature`
-                # while counter 1 < `counter` <= (len(join_features)-1) join the nth `join_feature` to `out_feature` (i.e., append)
-                # counter = 0
-                # while counter == 0: 
-                #     print(f'counter: {counter}; (type: join_feature to target_feature); {join_features[counter]}')
-                #     arcpy.analysis.SpatialJoin(target_feature, join_features[counter], out_feature)
-                #     counter += 1
-                # while 0 < counter <= (len(join_features)-1):
-                #     print(f'counter: {counter}; (type: join_feature to out_feature); {join_features[counter]}')
-                #     arcpy.analysis.SpatialJoin(out_feature, join_features[counter], out_feature)
-                #     counter += 1
+                if self.verbose == True:
+                    print('----------')
+                    print(f'target_feature_ok: {target_feature_ok}')
+                    print('----------')
+                    print(f'join_features_ok: {join_features_ok}')
+                    print('----------')
+                    print(f'{len(join_features)} features provided to join:')
+                    print('----------')
+                    counter = 1
+                    for f in join_features:
+                        print(f'{counter}. {f}')
+                        counter += 1
+                    print('----------')
+                    print('Joining...')
+                    print('----------')
+
+                # build up the temp-feature filepaths
+                temps = []
+                for i in range(0, len(join_features)):
+                    temp = 'data\\test.gdb\\temp' + str(i+1)
+                    temps.append(temp)
+                out_features = []
+                for i in range(0, len(join_features)):
+                    out_feature = os.path.join(os.getcwd(), temps[i])
+                    out_features.append(out_feature)
 
                 # join first feature
                 counter = 0
-                arcpy.analysis.SpatialJoin(target_feature, join_features[0], out_feature)
+                arcpy.analysis.SpatialJoin(target_feature, join_features[0], out_features[0])
                 if self.verbose == True:
                     print(f'counter: {int(counter) + 1}; (type: join_feature to target_feature); {join_features[0]}')
-                
+
                 # join nth feature
                 counter += 1
                 if len(join_features) > 1:
                     for i in range(1, len(join_features)): # start loop at [1] to avoid double-joining layer at index [0]
-                        arcpy.analysis.SpatialJoin(out_feature, join_features[i], out_feature)
+                        arcpy.analysis.SpatialJoin(out_features[i-1], join_features[i], out_features[i])
                         if self.verbose == True:
                             print(f'counter: {int(counter) + 1}; (type: join_feature to out_feature); {join_features[i]}')
                         counter += 1
+                
+                # copy output from nth joined feature to `dest_feature`
+                arcpy.management.CopyFeatures(out_features[len(out_features)-1], dest_feature)
+
+                # delete temporary features
+                for layer in out_features:
+                    arcpy.management.DeleteFeatures(layer)
 
                 # save field names
-                print('here')
-                self.field_names = [f.name for f in arcpy.ListFields(out_feature)] # will only return colnames if join worked
-                # field_names = [f.name for f in arcpy.ListFields(out_feature)]
-                # self.field_names = field_names
-                print('got here')
+                self.field_names = [f.name for f in arcpy.ListFields(dest_feature)] # will only return colnames if join worked
                 # add output to log file
                 self.huc_data['join_datetime'] = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
-                print('got here2')
-                self.huc_data['join_fields'] = ';'.join(join_features)
-                print('got here3')
-                self.huc_data['out_layer'] = out_feature
-                print('got here2')
+                self.huc_data['join_features'] = ';'.join(join_features)
+                self.huc_data['out_layer'] = dest_feature
 
             if not self.field_names:
                 raise Exception
@@ -659,8 +672,10 @@ class Huc():
                 raise Exception
 
             if self.verbose == True:
-                print(f'target_feature_ok: {target_feature_ok}')
-                print(f'join_features_ok: {join_features_ok}')
+                print('----------')
+                print(f'Joined features saved:')
+                print('----------')
+                print(dest_feature)
         except:
             print('error `join()`')
     
