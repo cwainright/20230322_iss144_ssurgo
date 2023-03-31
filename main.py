@@ -48,15 +48,94 @@ myhuc.join(
     target_feature=os.path.join(os.getcwd(), r'data\test.gdb\Mapunits')
 )
 myhuc.convert()
+myhuc.select()
 myhuc.save_huc(filename='data/myhuc')
 myhuc.write_huc(out_file='data/testlog.xlsx')
 
-myhuc.select()
-# myhuc.copy()
+input_user = os.path.join(os.getcwd(), 'data', 'mygdb.gdb')
+myhuc.copy(save_dir=input_user)
 
 
 
 
+
+
+
+
+
+
+
+#################################
+# scaled up example
+input_user = os.path.join(os.getcwd(), 'data', 'mygdb2.gdb')
+realpath = input_user
+splitpath = realpath.split('\\')
+findindex = len(splitpath)-1
+gdbname = splitpath[findindex]
+splitpath.pop(gdbname)
+shortpath = splitpath
+shortpath.pop() # removes last element from list
+shortpath = os.path.join(*shortpath)
+shortpath = shortpath.replace('C:', 'C:\\')
+if not os.path.isdir(realpath):
+    arcpy.management.CreateFileGDB(shortpath, gdbname)
+
+# copy tables
+for i in range(0, len(myhuc.out_tables)):
+    copied_table_name =  os.path.split(myhuc.out_tables[i])[1]
+    out_data = os.path.join(realpath, copied_table_name)
+    in_data = myhuc.out_tables[i]
+    arcpy.management.Copy(in_data, out_data)
+# copy Mapunits
+# arcpy.env.workspace = r'data\test.gdb'
+arcpy.env.workspace = os.path.split(myhuc.out_tables[0])[0]
+datasets = arcpy.ListDatasets()
+datasets = [''] + datasets if datasets is not None else []
+mydata = []
+for ds in datasets:
+    for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
+        path = os.path.join(arcpy.env.workspace, ds, fc)
+        mydata.append(path)
+in_data = os.path.join(os.getcwd(), mydata[0])
+copied_table_name = os.path.split(in_data)[1]
+out_data = os.path.join(realpath, copied_table_name)
+arcpy.management.Copy(in_data, out_data)
+
+###################################################
+
+
+
+path = os.path.join(os.getcwd(), r'data')
+gdb_name = "fGDB5.gdb"
+arcpy.management.CreateFileGDB(path, gdb_name)
+
+
+
+
+
+shortpath == path
+
+
+
+
+
+
+
+os.path.normpath(shortpath)
+
+
+
+
+os.path.split(myhuc.out_features[0])
+save_dir = os.path.join(os.getcwd() + r'data\test.gdb')
+save_dir = os.path.normpath(save_dir)
+destinations = []
+for table in myhuc.out_tables:
+    destination = os.path.join(save_dir, os.path.split(table)[1])
+    # print(destination)
+    destinations.append(destination)
+
+os.path.normpath(destinations[0])
 
 
 

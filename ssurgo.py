@@ -717,16 +717,61 @@ class Huc():
             - The directory (folder) into which you want to copy the tables produced by `select()`
         ### Examples
         ```
-        myhuc.copy(save_dir='data')
+        import os
+        input_user = os.path.join(os.getcwd(), 'data', 'mygdb2.gdb')
+        myhuc.copy(save_dir=input_user)
         ```
         '''
         try:
-            for table in self.out_tables:
-                destination = os.path.join(save_dir, os.path.split(table)[1])
-                print(destination)
-                arcpy.CopyRows_management(table, destination)
+            realpath = save_dir
+            if self.verbose == True:
+                print('Copying files...')
+            splitpath = realpath.split('\\')
+            findindex = len(splitpath)-1
+            gdbname = splitpath[findindex]
+            splitpath.pop(gdbname)
+            shortpath = splitpath
+            shortpath.pop() # removes last element from list
+            shortpath = os.path.join(*shortpath)
+            shortpath = shortpath.replace('C:', 'C:\\')
+            if not os.path.isdir(realpath):
+                arcpy.management.CreateFileGDB(shortpath, gdbname)
+                if self.verbose == True:
+                    print(f'Created {realpath} because it did not exist.')
+
+            # copy tables
+            for i in range(0, len(self.out_tables)):
+                copied_table_name =  os.path.split(self.out_tables[i])[1]
+                out_data = os.path.join(realpath, copied_table_name)
+                in_data = self.out_tables[i]
+                arcpy.management.Copy(in_data, out_data)
+                if self.verbose == True:
+                    print('----------')
+                    print(f'Copied {copied_table_name}')
+                    print(f'To {out_data}')
+                    print('----------')
+            # copy Mapunits
+            # arcpy.env.workspace = r'data\test.gdb'
+            arcpy.env.workspace = os.path.split(self.out_tables[0])[0]
+            datasets = arcpy.ListDatasets()
+            datasets = [''] + datasets if datasets is not None else []
+            mydata = []
+            for ds in datasets:
+                for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
+                    path = os.path.join(arcpy.env.workspace, ds, fc)
+                    mydata.append(path)
+            in_data = os.path.join(os.getcwd(), mydata[0])
+            copied_table_name = os.path.split(in_data)[1]
+            out_data = os.path.join(realpath, copied_table_name)
+            arcpy.management.Copy(in_data, out_data)
+            if self.verbose == True:
+                print('----------')
+                print(f'Copied {copied_table_name}')
+                print(f'To {out_data}')
+                print('----------')
+                print('Copying completed.')
         except:
-            pass
+            print('problem `copy()`')
 
 def open_huc(filename:str):
         # saving `open_huc` outside a class instance so it's accessible via `ssurgo.open_huc` not as `ssurgo.Huc.open_huc` bound method
