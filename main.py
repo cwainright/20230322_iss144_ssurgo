@@ -48,6 +48,166 @@ myhuc.join(
     target_feature=os.path.join(os.getcwd(), r'data\test.gdb\Mapunits')
 )
 myhuc.convert()
+myhuc.save_huc(filename='data/myhuc')
+myhuc.write_huc(out_file='data/testlog.xlsx')
+
+myhuc.select()
+# myhuc.copy()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# concrete
+table = myhuc.out_tables[0]
+table_cols = final_field_names[table]["colnames"]
+delete_me = table_cols[5:10]
+arcpy.management.DeleteField(table, [f.name for f in arcpy.ListFields(table)][5], 'KEEP_FIELDS')
+
+
+myoutput = {}
+for i in range(0, len(myhuc.out_tables)):
+    table = myhuc.out_tables[i]
+    # print(table)
+    table_cols = myhuc.field_names[myhuc.out_features[i]]["colnames"]
+    # print(table_cols)
+    if myhuc.out_features[i].endswith('ECO_MonitoringLocations_EsriSSRUGO_temp'):
+        start_field = 'IMLOCNAME'
+    elif myhuc.out_features[i].endswith('ECO_MonitoringLocationsData_EsriSSRUGO_temp'):
+        start_field = 'DATAIMLOCNAME'
+    else:
+        print('problem')
+    # print(start_field)
+    find_index = table_cols.index(start_field)
+    # print(find_index)
+    delete_cols = table_cols[find_index:]
+    # print(delete_cols)
+    arcpy.management.DeleteField(table, delete_cols)
+    print('got here')
+    myoutput[table] = {
+                    'ncol': len([f.name for f in arcpy.ListFields(table)]),
+                    'colnames': [f.name for f in arcpy.ListFields(table)]
+                }
+
+
+
+
+
+
+
+# concrete
+start_field = 'IMLOCNAME'
+layer_colnames = myhuc.field_names[myhuc.out_features[0]]["colnames"] # tempvar holding the `layer`'s column names
+final_index = layer_colnames.index(start_field) # find the index of `start_field` in the `layer`'s column names
+table_cols = layer_colnames[:final_index] # list slice columns up to but not including `final_index`
+delete_cols = layer_colnames[final_index:]
+table = myhuc.out_tables[0]
+arcpy.management.DeleteField(table, delete_cols)
+
+# test
+mytest = myhuc.field_names[myhuc.out_features[0]]["colnames"]
+myhuc.field_names[myhuc.out_features[0]]["colnames"]
+len(myhuc.field_names[myhuc.out_features[0]]["colnames"])
+for feature in myhuc.out_features:
+    'INDICATORCAT'in myhuc.field_names[feature]["colnames"]
+
+myhuc.out_features[1].endswith('ECO_MonitoringLocationsData_EsriSSRUGO_temp')
+myhuc.field_names[myhuc.out_features[1]]["colnames"]
+myhuc.field_names[myhuc.out_features[0]]["colnames"]
+# abstract
+
+final_field_names = {}
+for i in range(0, len(myhuc.out_features)):
+    if myhuc.out_features[i].endswith('ECO_MonitoringLocations_EsriSSRUGO_temp'):
+        start_field = 'IMLOCNAME'
+    elif myhuc.out_features[i].endswith('ECO_MonitoringLocationsData_EsriSSRUGO_temp'):
+        start_field = 'DATAIMLOCNAME'
+    # print(start_field)
+    layer_colnames = myhuc.field_names[myhuc.out_features[i]]["colnames"] # tempvar holding the `layer`'s column names
+    final_index = layer_colnames.index(start_field) # find the index of `start_field` in the `layer`'s column names
+    table_cols = layer_colnames[:final_index] # list slice columns up to but not including `final_index`
+    delete_cols = layer_colnames[final_index:]
+    # `table` is the name of a table
+    # `field` is an iterable of field name strings
+    # `KEEP_FIELDS` or ` DELETE_FIELDS` tells the function whether to keep or delete the fields provided in `field`
+    # arcpy.management.DeleteField(table, field, 'KEEP_FIELDS') # delete fields other than those in `table_cols`
+    final_field_names[myhuc.out_tables[i]] = { # capture output
+                    'ncol': len(table_cols),
+                    'colnames': table_cols
+                }
+
+import json
+print(json.dumps(final_field_names, indent = 4))
+# can you arcpy.ListFields() a table???
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

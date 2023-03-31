@@ -563,39 +563,7 @@ class Huc():
         ```
         '''
         try:
-            # confirm that the provided features exist
-            # target_feature_ok = False
-
-            # arcpy.env.workspace = os.path.split(target_feature)[0]
-            # datasets = arcpy.ListDatasets()
-            # datasets = [''] + datasets if datasets is not None else []
-
-            # paths = []
-            # for ds in datasets:
-            #     for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
-            #         path = os.path.join(arcpy.env.workspace, ds, fc)
-            #         paths.append(path)
-            # if os.path.normpath(target_feature) in paths:
-            #     target_feature_ok = True
-
-            # join_features_ok = []
-            # for feature in join_features:
-            #     arcpy.env.workspace = os.path.join(os.getcwd(), *os.path.split(re.search('(?:(?!\\\IMD).)*', feature)[0]))
-            #     datasets = arcpy.ListDatasets()
-            #     datasets = [''] + datasets if datasets is not None else []
-
-            #     paths = []
-            #     for ds in datasets:
-            #         for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
-            #             path = os.path.normpath(os.path.join(arcpy.env.workspace, ds, fc))
-            #             paths.append(path)
-            #     if os.path.normpath(feature) in paths:
-            #         join_features_ok.append(True)
-            #     else:
-            #         join_features_ok.append(False)
             if self.verbose == True:
-                # print('----------')
-                # print(f'target_feature_ok: {target_feature_ok}')
                 print('----------')
                 print(f'{len(join_features)} features provided to join:')
                 print('----------')
@@ -604,10 +572,6 @@ class Huc():
                     print(f'{counter}. {f}')
                     counter += 1
                 print('----------')
-                # print('join_features_ok:')
-                # for feature in join_features_ok:
-                #     print(f'{str(join_features.index(feature) + 1)}. {feature}')
-                # print('----------')
                 print('Joining...')
                 print('----------')
 
@@ -621,23 +585,21 @@ class Huc():
 
             for i in range(0, len(join_features)):
                 arcpy.analysis.SpatialJoin(target_feature, join_features[i], out_features[i])
-
+            
+            # capture output
             self.field_names = {}
             for feature in out_features:
                 self.field_names[feature] = {
                     'ncol': len([f.name for f in arcpy.ListFields(feature)]),
                     'colnames': [f.name for f in arcpy.ListFields(feature)]
                 }
+            self.join_features = join_features
+            self.out_features = out_features
+
             # add output to log file
             self.huc_data['join_datetime'] = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
             self.huc_data['join_features'] = ';'.join(join_features)
             self.huc_data['out_features'] = ';'.join(out_features)
-            self.join_features = join_features
-            self.out_features = out_features
-                # self.out_layer = dest_feature
-
-            # make tables from temporary feature layers
-            # self._convert()
 
             if not self.field_names:
                 raise Exception
@@ -671,6 +633,7 @@ class Huc():
             table = feature.replace('_temp', '_tbl')
             out_tables.append(table)
         if self.verbose == True:
+            print('----------')
             print(f'Converting {len(out_tables)} layers to tables...')
 
         # save outputs
@@ -688,69 +651,82 @@ class Huc():
             out_table = os.path.split(out_tables[i])[1]
             if self.verbose == True:
                 print('----------')
-                print(f'{str(i+1)}. target gdb: {target_gdb}')
+                print(f'{str(i+1)}.')
                 print(f'Convert this feature layer: {temp_layer}')
                 print(f'To this table: {out_table}')
+                print(f'Save table to this gdb: {target_gdb}')
                 print('----------')
             # convert each temporary feature layer to table
             arcpy.conversion.ExportTable(temp_layer, out_table)
         if self.verbose == True:
             print(f'Converted {len(out_tables)} layers to tables.')
     
-    def select(self, start_field:str='INDICATORCAT', delete_from:str=''):
+    def select(self):
         '''
-        # Select the columns needed for the final table
+        # A pre-programmed select statement to delete unwanted columns from the final tables
 
-        ### `start_field`; kwarg; str
-            - Required
-            - Default 'INDICATORCAT'; the field immediately following 'IMLOCNAME'
-            - Program will select columns up to but not including the column name provided
-        ### `delete_from`; kwarg; str
-            - Required
-            - If left blank, `delete_from` defaults to the `dest_feature` provided in `join()`
         ### Examples
         ```
-
+        myhuc.select()
         ```
         '''
         try:
-            field_exist = False
-            if start_field in self.field_names:
-                field_exist = True
-            
-            if field_exist == True:
+            final_field_names = {}
+            if self.verbose == True:
+                print('Deleting selected columns...')
+            for i in range(0, len(self.out_tables)):
+                table = self.out_tables[i]
+                # print(table)
+                table_cols = self.field_names[self.out_features[i]]["colnames"]
+                # print(table_cols)
+                if self.out_features[i].endswith('ECO_MonitoringLocations_EsriSSRUGO_temp'):
+                    start_field = 'IMLOCNAME'
+                elif self.out_features[i].endswith('ECO_MonitoringLocationsData_EsriSSRUGO_temp'):
+                    start_field = 'DATAIMLOCNAME'
+                else:
+                    print('problem')
+                # print(start_field)
+                find_index = table_cols.index(start_field)
+                # print(find_index)
+                delete_cols = table_cols[find_index:]
+                # print(delete_cols)
+                arcpy.management.DeleteField(table, delete_cols)
                 if self.verbose == True:
+                    diff = len(table_cols) - len(delete_cols)
                     print('----------')
-                    print(f'Keeping fields up to but not including "{start_field}"...')
+                    print(f'Deleted {diff} columns from {table}')
                     print('----------')
-                final_index = self.field_names.index(start_field)
-                self.final_fieldnames = self.field_names[:final_index]
-                delete_fields = self.field_names[final_index:]
-                # if delete_from == '':
-                #     delete_from = self.out_layer
-                # else:
-                #     delete_from = delete_from
-                # for field in delete_fields:
-                #     arcpy.management.DeleteField(delete_from, field)
-
+                final_field_names[table] = {
+                                'ncol': len([f.name for f in arcpy.ListFields(table)]),
+                                'colnames': [f.name for f in arcpy.ListFields(table)]
+                            }
+            # save output
+            self.final_field_names = final_field_names
             # log activity
             self.huc_data['fields_selected_datetime'] = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
 
-            if self.verbose == True:
-                print(f'{len(self.field_names)} original fields:')
-                print('----------')
-                for name in self.field_names:
-                    print(f'{str(self.field_names.index(name)+1)}. {name}')
-                print('----------')
-                print(f'{len(self.final_fieldnames)} final fields:')
-                print('----------')
-                for name in self.final_fieldnames:
-                    print(f'{str(self.final_fieldnames.index(name)+1)}. {name}')
-
-            else:
-                print('You entered a `start_field` that does not exist.')
         except:
             print('problem `select()`')
+
+    def copy(self, save_dir:str):
+        '''
+        # Copy the final tables to a destination directory
+
+        ### `save_dir`; kwarg; str
+            - Required
+            - The directory (folder) into which you want to copy the tables produced by `select()`
+        ### Examples
+        ```
+        myhuc.copy(save_dir='data')
+        ```
+        '''
+        try:
+            for table in self.out_tables:
+                destination = os.path.join(save_dir, os.path.split(table)[1])
+                print(destination)
+                arcpy.CopyRows_management(table, destination)
+        except:
+            pass
 
 def open_huc(filename:str):
         # saving `open_huc` outside a class instance so it's accessible via `ssurgo.open_huc` not as `ssurgo.Huc.open_huc` bound method
