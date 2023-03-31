@@ -67,7 +67,10 @@ myhuc.copy(save_dir=input_user)
 
 #################################
 # scaled up example
+#################################
+# collect user input
 input_user = os.path.join(os.getcwd(), 'data', 'mygdb2.gdb')
+# process user input
 realpath = input_user
 splitpath = realpath.split('\\')
 findindex = len(splitpath)-1
