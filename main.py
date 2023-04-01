@@ -3,7 +3,7 @@
 
 import ssurgo
 import os
-import arcpy
+import shutil
 from importlib import reload
 reload(ssurgo)
 
@@ -28,6 +28,26 @@ myhuc.save_huc(filename='data/myhuc')
 myhuc.write_huc(out_file='data/testlog.xlsx')
 
 
+# copy script results to their final destinations:
+# copy Arc files
+input_user = os.path.normpath(r'C:\Users\cwainright\OneDrive - DOI\Documents - NCRN Data Management\Geospatial\GIS\Geodata\Basedata\Vector\Soil\SSURGO\SSURGO_Esri.gdb')
+myhuc.copy(save_dir=input_user)
+# copy ppkx files
+sources = []
+targets = []
+target_dir = os.path.split(input_user)[0]
+for huc in myhuc.huc_data["HUC8"]:
+    target = os.path.join(target_dir, os.path.split(huc)[1])
+    targets.append(target)
+    sources.append(os.path.split(dir)[0])
+# if not os.path.isdir(target_dir):
+#     os.makedirs(target_dir)
+
+if len(sources) == len(targets):
+    for i in range(0, len(sources)):
+        shutil.copytree(sources[i], targets[i])
+else:
+    print('source and target mismatch')
 '''
 # a part-length test workflow
 myhuc = ssurgo.Huc(filename='data/test.xlsx', VERBOSE=True)
