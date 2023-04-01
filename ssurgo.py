@@ -712,9 +712,9 @@ class Huc():
         '''
         # Copy the final tables to a destination directory
 
-        ### `save_dir`; kwarg; str
+        ### `save_gdb`; kwarg; str
             - Required
-            - The directory (folder) into which you want to copy the tables produced by `select()`
+            - The gdb into which you want to copy the tables produced by `select()`
         ### Examples
         ```
         import os
@@ -764,9 +764,6 @@ class Huc():
             out_data = os.path.join(realpath, copied_table_name)
             arcpy.management.Copy(in_data, out_data)
             if self.verbose == True:
-                print('----------')
-                print(f'Copied {copied_table_name}')
-                print(f'To {out_data}')
                 print('----------')
                 print('Copying completed.')
         except:
