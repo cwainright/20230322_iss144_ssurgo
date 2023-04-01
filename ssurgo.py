@@ -729,7 +729,6 @@ class Huc():
             splitpath = realpath.split('\\')
             findindex = len(splitpath)-1
             gdbname = splitpath[findindex]
-            splitpath.pop(gdbname)
             shortpath = splitpath
             shortpath.pop() # removes last element from list
             shortpath = os.path.join(*shortpath)

@@ -7,6 +7,7 @@ import arcpy
 from importlib import reload
 reload(ssurgo)
 
+'''
 # myhuc = ssurgo.Huc(filename='data/iss144_ssurgo.xlsx', VERBOSE=True)
 myhuc = ssurgo.Huc(filename='data/test.xlsx', VERBOSE=True)
 myhuc.build_urls()
@@ -51,8 +52,11 @@ myhuc.convert()
 myhuc.select()
 myhuc.save_huc(filename='data/myhuc')
 myhuc.write_huc(out_file='data/testlog.xlsx')
+'''
 
-input_user = os.path.join(os.getcwd(), 'data', 'mygdb.gdb')
+myhuc = ssurgo.open_huc(filename='data/myhuc')
+myhuc.huc_data
+input_user = os.path.join(os.getcwd(), 'data', 'mygdb3.gdb')
 myhuc.copy(save_dir=input_user)
 
 
@@ -75,7 +79,7 @@ realpath = input_user
 splitpath = realpath.split('\\')
 findindex = len(splitpath)-1
 gdbname = splitpath[findindex]
-splitpath.pop(gdbname)
+# splitpath.pop(gdbname)
 shortpath = splitpath
 shortpath.pop() # removes last element from list
 shortpath = os.path.join(*shortpath)
