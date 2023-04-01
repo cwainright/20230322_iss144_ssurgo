@@ -7,7 +7,8 @@ import arcpy
 from importlib import reload
 reload(ssurgo)
 
-myhuc = ssurgo.Huc(filename='data/test.xlsx', VERBOSE=True)
+# a full test workflow
+myhuc = ssurgo.Huc(filename='data/iss144_ssurgo.xlsx', VERBOSE=True)
 myhuc.build_urls()
 myhuc.download(save_directory='data')
 myhuc.unpack()
@@ -28,6 +29,30 @@ myhuc.write_huc(out_file='data/testlog.xlsx')
 
 
 '''
+# a part-length test workflow
+myhuc = ssurgo.Huc(filename='data/test.xlsx', VERBOSE=True)
+myhuc.build_urls()
+myhuc.download(save_directory='data')
+myhuc.unpack()
+filename = 'test.gdb'
+file_dir = os.path.join(os.getcwd(), 'data')
+myhuc.merge(filename=filename, file_dir=file_dir)
+myhuc.join(
+    os.path.join(os.getcwd(), r"data\\NCRN_Monitoring_Locations.gdb\\IMD\\ECO_MonitoringLocations_pt"),
+    os.path.join(os.getcwd(), r"data\\NCRN_Monitoring_Locations.gdb\\IMD\\ECO_MonitoringLocationsData_pt"),
+    target_feature=os.path.join(os.getcwd(), r'data\test.gdb\Mapunits')
+)
+myhuc.convert()
+myhuc.select()
+input_user = os.path.join(os.getcwd(), 'data', 'mygdb.gdb')
+myhuc.copy(save_dir=input_user)
+myhuc.save_huc(filename='data/myhuc')
+myhuc.write_huc(out_file='data/testlog.xlsx')
+'''
+
+'''
+# notes and test bits
+
 # myhuc = ssurgo.Huc(filename='data/iss144_ssurgo.xlsx', VERBOSE=True)
 myhuc = ssurgo.Huc(filename='data/test.xlsx', VERBOSE=True)
 myhuc.build_urls()
